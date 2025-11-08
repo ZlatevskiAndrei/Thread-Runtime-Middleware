@@ -9,13 +9,18 @@ system_state_t sys_state;
 
 __thread task_t *active_task;
 
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t non_full = PTHREAD_COND_INITIALIZER;
+pthread_cond_t non_empty = PTHREAD_COND_INITIALIZER;
+tasks_queue_t* tqueue = NULL;
 
 void runtime_init(void)
 {
-    /* a random number generator might be useful towards the end of
-       the lab */
     rand_generator_init();
 
+    initialize_mutex(&mutex, NULL);
+    initialize_cond(&non_empty, NULL);
+    initialize_cond(&non_full, NULL);
     create_queues();
     create_thread_pool();
 

@@ -1,11 +1,9 @@
-#include <stdio.h>
-
 #include "tasks_implem.h"
 #include "tasks_queue.h"
 #include "debug.h"
+#include "worker_thread.h"
 
-tasks_queue_t *tqueue= NULL;
-
+pthread_t* tids;
 
 void create_queues(void)
 {
@@ -17,9 +15,47 @@ void delete_queues(void)
     free_tasks_queue(tqueue);
 }    
 
+void initialize_mutex(pthread_mutex_t* mutex, int* type) {
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, *type);
+    
+    if (pthread_mutex_init(mutex, &attr) != 0) {
+        PRINT_DEBUG(1,"pthread_mutex_init failed");
+    }
+
+    pthread_mutexattr_destroy(&attr);
+}
+
+void initialize_cond(pthread_cond_t *cond, pthread_condattr_t *attr) {
+    int ret;
+
+    if (attr == NULL) {
+        ret = pthread_cond_init(cond, NULL);
+    } else {
+        ret = pthread_cond_init(cond, attr);
+    }
+
+    if (ret != 0) {
+        PRINT_DEBUG(1,"pthread_cond_init failed");
+    }
+}
+
 void create_thread_pool(void)
 {
-    return ;
+    pthread_attr_t tattr;
+    int ret;
+
+    ret = pthread_attr_init(&tattr); //with default values for now
+    assert (ret == 0);
+    tids = malloc(THREAD_COUNT*sizeof(pthread_t));
+    assert(tids != NULL);
+
+    for(int i = 0 ; i < THREAD_COUNT; i++){
+        if(pthread_create (&tids[i], &tattr, worker_routine, NULL) != 0){
+            PRINT_DEBUG(100,"Failed to create thread number %d\n",i);
+        }
+    }
 }
 
 void dispatch_task(task_t *t)
