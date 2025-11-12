@@ -1,4 +1,8 @@
 #include <stdlib.h>
+#include <sys/syscall.h>
+#include <stdatomic.h>
+#include <linux/futex.h>
+#include <unistd.h>
 
 #include "tasks.h"
 #include "tasks_implem.h"
@@ -13,6 +17,7 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t non_full = PTHREAD_COND_INITIALIZER;
 pthread_cond_t non_empty = PTHREAD_COND_INITIALIZER;
 tasks_queue_t* tqueue = NULL;
+_Atomic bool barrier;
 
 void runtime_init(void)
 {
@@ -21,8 +26,10 @@ void runtime_init(void)
     initialize_mutex(&mutex, NULL);
     initialize_cond(&non_empty, NULL);
     initialize_cond(&non_full, NULL);
+    __atomic_store_n(&barrier, 0, __ATOMIC_RELAXED);
     create_queues();
     create_thread_pool();
+
 
     sys_state.task_counter = 0;    
 }
@@ -91,20 +98,18 @@ void submit_task(task_t *t)
 
 void task_waitall(void)
 {
-    active_task = get_task_to_execute();
+    __atomic_store_n(&barrier, 1, __ATOMIC_RELAXED);
+    while(__atomic_load_n(&barrier, __ATOMIC_RELAXED) == 1){
+        syscall(SYS_futex, &barrier, FUTEX_WAIT, 1, NULL, NULL, 0);
+    }
+    return ;
+}
 
-    while(active_task != NULL){
-        task_return_value_t ret = exec_task(active_task);
 
-        if (ret == TASK_COMPLETED){
-            terminate_task(active_task);
-        }
+/*
 #ifdef WITH_DEPENDENCIES
         else{
             active_task->status = WAITING;
         }
 #endif
-
-        active_task = get_task_to_execute();
-    }
-}
+*/

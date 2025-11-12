@@ -19,6 +19,6 @@ task_t* fetch(void){
 void run(task_t* task){
     task_return_value_t ret = exec_task(task);
     if (ret == TASK_COMPLETED){
-        terminate_task(active_task);
+        terminate_task(task);
     }
 }

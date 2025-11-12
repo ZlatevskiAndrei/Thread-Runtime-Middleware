@@ -52,7 +52,7 @@ void create_thread_pool(void)
     tids = malloc(THREAD_COUNT*sizeof(pthread_t));
     assert(tids != NULL);
 
-    for(int i = 0 ; i < THREAD_COUNT; i++){
+    for(int i = 0; i < THREAD_COUNT; i++){
         if(pthread_create (&tids[i], &tattr, worker_routine, NULL) != 0){
             PRINT_DEBUG(100,"Failed to create thread number %d\n",i);
         }
@@ -60,10 +60,10 @@ void create_thread_pool(void)
 }
 
 void kill_thread_pool(){
-    for(int i = 0 ; i < THREAD_COUNT; i++){
+    for(int i = 0; i < THREAD_COUNT; i++){
         PRINT_DEBUG(10,"Killing worker thread: %ld\n", tids[i]);
         int r = pthread_kill(tids[i], SIGINT);
-        assert(!r);
+        assert(r == 0);
     }    
 }
 

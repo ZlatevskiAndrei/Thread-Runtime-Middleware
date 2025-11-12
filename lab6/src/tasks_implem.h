@@ -28,6 +28,5 @@ extern tasks_queue_t* tqueue;
 extern pthread_mutex_t mutex;
 extern pthread_cond_t non_full;
 extern pthread_cond_t non_empty;
-
-
+extern _Atomic bool barrier;
 #endif
