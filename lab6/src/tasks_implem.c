@@ -19,7 +19,14 @@ void delete_queues(void)
 void initialize_mutex(pthread_mutex_t* mutex, int* type) {
     pthread_mutexattr_t attr;
     pthread_mutexattr_init(&attr);
-    pthread_mutexattr_settype(&attr, *type);
+
+    if(type == NULL){
+        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL);
+    }
+    else {
+        pthread_mutexattr_settype(&attr, *type);
+
+    }
     
     if (pthread_mutex_init(mutex, &attr) != 0) {
         PRINT_DEBUG(1,"pthread_mutex_init failed");

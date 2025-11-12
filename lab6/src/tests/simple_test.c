@@ -18,7 +18,7 @@ task_return_value_t print_message(task_t *t, unsigned int step)
     char *msg= (char*) retrieve_input(t);
     int *s = (int*) retrieve_input(t);
     
-    printf("%s\n", msg);
+    printf("%s %d\n", msg, *s);
 
     if(*s != stage){
         PRINT_TEST_FAILED("The semantic of some functions of the API is not correctly implemented\n");
@@ -72,7 +72,7 @@ int main(void)
     int *in2 = attach_input(t, sizeof(int));
     *in2 = SLEEP_DURATION;
 
-    submit_task(t);
+    submit_task(t); 
 
     task_waitall();
 

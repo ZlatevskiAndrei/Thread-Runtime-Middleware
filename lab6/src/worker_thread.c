@@ -20,5 +20,6 @@ void run(task_t* task){
     task_return_value_t ret = exec_task(task);
     if (ret == TASK_COMPLETED){
         terminate_task(task);
+        __atomic_store_n(&nb_executed_tasks, nb_executed_tasks + 1, __ATOMIC_RELAXED);
     }
 }

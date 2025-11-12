@@ -7,7 +7,7 @@
 
 #include "tasks_queue.h"
 #include "tasks_implem.h"
-
+#include "debug.h"
 
 tasks_queue_t* create_tasks_queue(void)
 {
@@ -38,6 +38,7 @@ void enqueue_task(tasks_queue_t *q, task_t *t)
     while(q->index == q->task_buf_size){
         pthread_cond_wait(&non_full, &mutex);
     }
+    PRINT_DEBUG(100,"Inserted a task successfully! Number of elements: %d\n", q->index + 1);
     q->task_buffer[q->index] = t;
     q->index++;
     pthread_cond_broadcast(&non_empty);
@@ -50,6 +51,7 @@ task_t* dequeue_task(tasks_queue_t *q)
     pthread_mutex_lock(&mutex);
     while(q->index == 0){
         if(__sync_bool_compare_and_swap(&barrier, 1, 0)){
+            PRINT_DEBUG(100, "SYSCALL!\n");
             syscall(SYS_futex, &barrier, FUTEX_WAKE, 1, NULL, NULL, 0);
         }
         pthread_cond_wait(&non_empty, &mutex);
@@ -60,4 +62,3 @@ task_t* dequeue_task(tasks_queue_t *q)
     pthread_mutex_unlock(&mutex);
     return t; 
 }
-

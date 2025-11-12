@@ -18,6 +18,7 @@ pthread_cond_t non_full = PTHREAD_COND_INITIALIZER;
 pthread_cond_t non_empty = PTHREAD_COND_INITIALIZER;
 tasks_queue_t* tqueue = NULL;
 _Atomic bool barrier;
+_Atomic int nb_executed_tasks;
 
 void runtime_init(void)
 {
@@ -27,6 +28,7 @@ void runtime_init(void)
     initialize_cond(&non_empty, NULL);
     initialize_cond(&non_full, NULL);
     __atomic_store_n(&barrier, 0, __ATOMIC_RELAXED);
+    __atomic_store_n(&nb_executed_tasks, 0, __ATOMIC_RELAXED);
     create_queues();
     create_thread_pool();
 
@@ -50,7 +52,6 @@ void runtime_finalize(void)
 {
     task_waitall();
     PRINT_DEBUG(1, "Terminating ... \t Total task count: %lu \n", sys_state.task_counter);
-    kill_thread_pool();
     delete_queues();
 }
 
@@ -99,17 +100,10 @@ void submit_task(task_t *t)
 void task_waitall(void)
 {
     __atomic_store_n(&barrier, 1, __ATOMIC_RELAXED);
-    while(__atomic_load_n(&barrier, __ATOMIC_RELAXED) == 1){
+    while(__atomic_load_n(&nb_executed_tasks, __ATOMIC_RELAXED) < sys_state.task_counter){
+        __atomic_store_n(&barrier, 1, __ATOMIC_RELAXED);
+        PRINT_DEBUG(100, "SYSCALL!\n");
         syscall(SYS_futex, &barrier, FUTEX_WAIT, 1, NULL, NULL, 0);
     }
     return ;
 }
-
-
-/*
-#ifdef WITH_DEPENDENCIES
-        else{
-            active_task->status = WAITING;
-        }
-#endif
-*/
