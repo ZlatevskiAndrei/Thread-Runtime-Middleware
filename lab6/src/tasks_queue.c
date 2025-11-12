@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "tasks_queue.h"
+#include "tasks_implem.h"
 
 
 tasks_queue_t* create_tasks_queue(void)
@@ -29,25 +30,27 @@ void free_tasks_queue(tasks_queue_t *q)
 
 void enqueue_task(tasks_queue_t *q, task_t *t)
 {
-    if(q->index == q->task_buf_size){
-        fprintf(stderr,"ERROR: the queue of tasks is full\n");
-        exit(EXIT_FAILURE);
+    pthread_mutex_lock(&mutex);
+    while(q->index == q->task_buf_size){
+        pthread_cond_wait(&non_full, &mutex);
     }
-
     q->task_buffer[q->index] = t;
     q->index++;
+    pthread_cond_signal(&non_empty);
+    pthread_mutex_unlock(&mutex);
 }
 
 
 task_t* dequeue_task(tasks_queue_t *q)
 {
-    if(q->index == 0){
-        return NULL;
+    pthread_mutex_lock(&mutex);
+    while(q->index == 0){
+        pthread_cond_wait(&non_empty, &mutex);
     }
-
     task_t *t = q->task_buffer[q->index-1];
     q->index--;
-
+    pthread_cond_broadcast(&non_full);
+    pthread_mutex_unlock(&mutex);
     return t;
 }
 

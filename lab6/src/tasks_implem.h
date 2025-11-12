@@ -13,6 +13,7 @@ void create_queues(void);
 void delete_queues(void);
 
 void create_thread_pool(void);
+void kill_thread_pool(void);
 void initialize_mutex(pthread_mutex_t* mutex, int* type);
 void initialize_cond(pthread_cond_t *cond, pthread_condattr_t *attr);
 

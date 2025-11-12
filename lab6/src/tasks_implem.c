@@ -2,6 +2,7 @@
 #include "tasks_queue.h"
 #include "debug.h"
 #include "worker_thread.h"
+#include <signal.h>
 
 pthread_t* tids;
 
@@ -56,6 +57,14 @@ void create_thread_pool(void)
             PRINT_DEBUG(100,"Failed to create thread number %d\n",i);
         }
     }
+}
+
+void kill_thread_pool(){
+    for(int i = 0 ; i < THREAD_COUNT; i++){
+        PRINT_DEBUG(10,"Killing worker thread: %ld\n", tids[i]);
+        int r = pthread_kill(tids[i], SIGINT);
+        assert(!r);
+    }    
 }
 
 void dispatch_task(task_t *t)

@@ -9,7 +9,7 @@
 
 void* worker_routine(void* arg);
 task_t* fetch(void);
-task_return_value_t run(task_t*);
+void run(task_t*);
 
 
 #endif
