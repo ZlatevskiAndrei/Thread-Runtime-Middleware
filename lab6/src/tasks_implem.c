@@ -105,9 +105,13 @@ void terminate_task(task_t *t)
 #ifdef WITH_DEPENDENCIES
     if(t->parent_task != NULL){
         task_t *waiting_task = t->parent_task;
+
+        pthread_mutex_lock(&waiting_task->mutex_dependency);
         waiting_task->task_dependency_done++;
         
         task_check_runnable(waiting_task);
+
+        pthread_mutex_unlock(&waiting_task->mutex_dependency);
     }
 #endif
 
@@ -119,6 +123,7 @@ void task_check_runnable(task_t *t)
     if(t->task_dependency_done == t->task_dependency_count){
         t->status = READY;
         dispatch_task(t);
+        pthread_cond_signal(&t->cond_dependency);
     }
 #endif
 }
