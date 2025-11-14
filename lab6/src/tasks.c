@@ -88,7 +88,6 @@ void submit_task(task_t *t)
     if(active_task != NULL){
         t->parent_task = active_task;
         active_task->task_dependency_count++;
-        
         PRINT_DEBUG(100, "Dependency %u -> %u\n", active_task->task_id, t->task_id);
     }
 #endif

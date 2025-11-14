@@ -3,7 +3,7 @@
 #include <linux/futex.h>
 #include <sys/syscall.h>
 #include <unistd.h>
-
+#include <assert.h>
 
 #include "tasks_queue.h"
 #include "tasks_implem.h"
@@ -35,6 +35,10 @@ void free_tasks_queue(tasks_queue_t *q)
 void enqueue_task(tasks_queue_t *q, task_t *t)
 {
     pthread_mutex_lock(&mutex);
+    if(t->parent_task != NULL && q->index == q->task_buf_size){ //this child task is a priority and must be inserted immediately
+        assert(realloc(q->task_buffer, q->task_buf_size*2));
+        q->task_buf_size *= 2;
+    }
     while(q->index == q->task_buf_size){
         pthread_cond_wait(&non_full, &mutex);
     }
