@@ -2,9 +2,13 @@
 #include <pthread.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <linux/futex.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 
 #include "worker_thread.h"
 #include "tasks_implem.h"
+#include "debug.h"
 
 void* worker_routine(void* arg){
     while(1){
@@ -21,9 +25,17 @@ void run(task_t* task){
     if (ret == TASK_COMPLETED){
         __sync_fetch_and_add (&nb_executed_tasks, 1); 
         terminate_task(task);
-        if(task->parent_task != NULL && task->parent_task->status == WAITING){
-            task_check_runnable(task->parent_task);
-        }   
+        pthread_mutex_lock(&check_runnable_mutex);
+        if(task->parent_task != NULL 
+            && task->parent_task->status == WAITING 
+            && task->parent_task->task_dependency_done == task->parent_task->task_dependency_count){
+            task->parent_task->status = READY;
+            dispatch_task(task->parent_task);
+        }
+        if(last_parent_task_before_waitall == task){
+            syscall(SYS_futex, &barrier, FUTEX_WAKE, 1, NULL, NULL, 0);
+        }
+        pthread_mutex_unlock(&check_runnable_mutex);  
     }
     else {
         task->status = WAITING;

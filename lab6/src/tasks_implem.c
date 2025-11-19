@@ -110,15 +110,4 @@ void terminate_task(task_t *t)
         pthread_mutex_unlock(&waiting_task->dependency_done_mutex);
     }
 #endif
-
-}
-
-void task_check_runnable(task_t *t)
-{
-#ifdef WITH_DEPENDENCIES
-    if(t->task_dependency_done == t->task_dependency_count){
-        t->status = READY;
-        dispatch_task(t);
-    }
-#endif
 }

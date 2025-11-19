@@ -27,8 +27,12 @@ void task_check_runnable(task_t *t);
 extern tasks_queue_t* tqueue;
 extern pthread_mutex_t mutex;
 extern pthread_mutex_t sys_counter_mutex;
+extern pthread_mutex_t check_runnable_mutex;
+extern pthread_mutex_t barrier_mutex;
 extern pthread_cond_t non_full;
 extern pthread_cond_t non_empty;
+extern pthread_cond_t barrier_cond;
 extern _Atomic bool barrier;
+extern _Atomic bool last_parent_processed;
 extern _Atomic int nb_executed_tasks;
 #endif

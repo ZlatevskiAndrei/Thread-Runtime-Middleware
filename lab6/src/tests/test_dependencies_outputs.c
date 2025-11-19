@@ -7,7 +7,7 @@
 #include "../tasks.h"
 #include "../debug.h"
 
-#define NB_CHILDREN 8
+#define NB_CHILDREN 25000
 
 #define VAL 38000
 

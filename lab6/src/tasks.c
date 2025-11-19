@@ -13,14 +13,21 @@ system_state_t sys_state;
 
 __thread task_t *active_task;
 
+task_t* last_parent_task_before_waitall;
+
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t non_full = PTHREAD_COND_INITIALIZER;
 pthread_cond_t non_empty = PTHREAD_COND_INITIALIZER;
+pthread_cond_t barrier_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t sys_counter_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t check_runnable_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t barrier_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 tasks_queue_t* tqueue = NULL;
 _Atomic bool barrier;
+_Atomic bool last_parent_processed;
 _Atomic int nb_executed_tasks;
+
 
 void runtime_init(void)
 {
@@ -28,11 +35,15 @@ void runtime_init(void)
 
     initialize_mutex(&mutex, NULL);
     initialize_mutex(&sys_counter_mutex, NULL);
+    initialize_mutex(&check_runnable_mutex, NULL);
+    initialize_mutex(&barrier_mutex, NULL);
     initialize_cond(&non_empty, NULL);
     initialize_cond(&non_full, NULL);
+    initialize_cond(&barrier_cond, NULL);
     __atomic_store_n(&barrier, 0, __ATOMIC_RELAXED);
     __atomic_store_n(&nb_executed_tasks, 0, __ATOMIC_RELAXED);
     __atomic_store_n(&sys_state.task_counter, 0, __ATOMIC_RELAXED);
+    __atomic_store_n(&last_parent_processed, 0, __ATOMIC_RELAXED);
     create_queues();
     create_thread_pool();
 }
@@ -92,10 +103,13 @@ void submit_task(task_t *t)
 #ifdef WITH_DEPENDENCIES    
     if(active_task != NULL){
         t->parent_task = active_task;
-        pthread_mutex_lock(&active_task->dependency_count_mutex);
-        active_task->task_dependency_count++;
-        pthread_mutex_unlock(&active_task->dependency_count_mutex);
-        PRINT_DEBUG(100, "Dependency %u -> %u\n", active_task->task_id, t->task_id);
+        pthread_mutex_lock(&t->parent_task->dependency_count_mutex);
+        t->parent_task->task_dependency_count++;
+        pthread_mutex_unlock(&t->parent_task->dependency_count_mutex);
+        PRINT_DEBUG(100, "Dependency %u -> %u\n", t->parent_task->task_id, t->task_id);
+    }
+    else {
+        last_parent_task_before_waitall = t;
     }
 #endif
     
@@ -103,13 +117,12 @@ void submit_task(task_t *t)
 }
 
 
-void task_waitall(void)
+void task_waitall(void) 
 {
     __atomic_store_n(&barrier, 1, __ATOMIC_RELAXED);
-    while(__atomic_load_n(&nb_executed_tasks, __ATOMIC_RELAXED) < __atomic_load_n(&sys_state.task_counter, __ATOMIC_RELAXED)){
-        __atomic_store_n(&barrier, 1, __ATOMIC_RELAXED);
-        PRINT_DEBUG(100, "SYSCALL!\n");
-        syscall(SYS_futex, &barrier, FUTEX_WAIT, 1, NULL, NULL, 0);
+    syscall(SYS_futex, &barrier, FUTEX_WAIT, 1, NULL, NULL, 0);
+    if(!__atomic_load_n(&last_parent_processed, __ATOMIC_RELAXED)){
+        __atomic_store_n(&last_parent_processed, 1, __ATOMIC_RELAXED);
     }
     return ;
 }

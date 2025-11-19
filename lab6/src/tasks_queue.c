@@ -37,7 +37,11 @@ void enqueue_task(tasks_queue_t *q, task_t *t)
     pthread_mutex_lock(&mutex);
     if(q->index == q->task_buf_size) {
         q->task_buf_size += QUEUE_CAPACITY;
-        assert(realloc(q->task_buffer, sizeof(task_t*) * q->task_buf_size));
+        task_t **temp = realloc(q->task_buffer, sizeof(task_t) * q->task_buf_size);
+        if (temp == NULL) {
+            exit(EXIT_FAILURE);  
+        }
+        q->task_buffer = temp;  
     }
     PRINT_DEBUG(100,"Inserted a task successfully! Number of elements: %d\n", q->index + 1);
     q->task_buffer[q->index] = t;
@@ -50,8 +54,8 @@ void enqueue_task(tasks_queue_t *q, task_t *t)
 task_t* dequeue_task(tasks_queue_t *q)
 {
     pthread_mutex_lock(&mutex);
-    while(q->index == 0){
-        if(__sync_bool_compare_and_swap(&barrier, 1, 0)){
+    while(q->index <= 0){
+        if(__sync_bool_compare_and_swap(&barrier, 1, 0) && __atomic_load_n(&last_parent_processed, __ATOMIC_RELAXED)){
             PRINT_DEBUG(100, "SYSCALL!\n");
             syscall(SYS_futex, &barrier, FUTEX_WAKE, 1, NULL, NULL, 0);
         }
