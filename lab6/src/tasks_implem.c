@@ -105,7 +105,9 @@ void terminate_task(task_t *t)
 #ifdef WITH_DEPENDENCIES
     if(t->parent_task != NULL){
         task_t *waiting_task = t->parent_task;
+        pthread_mutex_lock(&waiting_task->dependency_done_mutex);
         waiting_task->task_dependency_done++;
+        pthread_mutex_unlock(&waiting_task->dependency_done_mutex);
     }
 #endif
 

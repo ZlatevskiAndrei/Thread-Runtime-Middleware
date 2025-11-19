@@ -35,12 +35,9 @@ void free_tasks_queue(tasks_queue_t *q)
 void enqueue_task(tasks_queue_t *q, task_t *t)
 {
     pthread_mutex_lock(&mutex);
-    if(t->parent_task != NULL && q->index == q->task_buf_size){ //this child task is a priority and must be inserted immediately
-        assert(realloc(q->task_buffer, q->task_buf_size*2));
-        q->task_buf_size *= 2;
-    }
-    while(q->index == q->task_buf_size){
-        pthread_cond_wait(&non_full, &mutex);
+    if(q->index == q->task_buf_size) {
+        q->task_buf_size += QUEUE_CAPACITY;
+        assert(realloc(q->task_buffer, sizeof(task_t*) * q->task_buf_size));
     }
     PRINT_DEBUG(100,"Inserted a task successfully! Number of elements: %d\n", q->index + 1);
     q->task_buffer[q->index] = t;
@@ -62,7 +59,6 @@ task_t* dequeue_task(tasks_queue_t *q)
     }
     task_t *t = q->task_buffer[q->index-1];
     q->index--;
-    pthread_cond_signal(&non_full);
     pthread_mutex_unlock(&mutex);
     return t; 
 }

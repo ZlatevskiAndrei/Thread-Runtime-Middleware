@@ -23,7 +23,7 @@ void run(task_t* task){
         terminate_task(task);
         if(task->parent_task != NULL && task->parent_task->status == WAITING){
             task_check_runnable(task->parent_task);
-        }
+        }   
     }
     else {
         task->status = WAITING;

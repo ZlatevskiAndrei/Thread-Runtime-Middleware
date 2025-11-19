@@ -16,6 +16,8 @@ __thread task_t *active_task;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t non_full = PTHREAD_COND_INITIALIZER;
 pthread_cond_t non_empty = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t sys_counter_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 tasks_queue_t* tqueue = NULL;
 _Atomic bool barrier;
 _Atomic int nb_executed_tasks;
@@ -25,15 +27,14 @@ void runtime_init(void)
     rand_generator_init();
 
     initialize_mutex(&mutex, NULL);
+    initialize_mutex(&sys_counter_mutex, NULL);
     initialize_cond(&non_empty, NULL);
     initialize_cond(&non_full, NULL);
     __atomic_store_n(&barrier, 0, __ATOMIC_RELAXED);
     __atomic_store_n(&nb_executed_tasks, 0, __ATOMIC_RELAXED);
+    __atomic_store_n(&sys_state.task_counter, 0, __ATOMIC_RELAXED);
     create_queues();
     create_thread_pool();
-
-
-    sys_state.task_counter = 0;    
 }
 
 void runtime_init_with_deps(void)
@@ -59,8 +60,9 @@ void runtime_finalize(void)
 task_t* create_task(task_routine_t f)
 {
     task_t *t = malloc(sizeof(task_t));
-
-    t->task_id = ++sys_state.task_counter;    
+    pthread_mutex_lock(&sys_counter_mutex);
+    t->task_id = ++sys_state.task_counter;  
+    pthread_mutex_unlock(&sys_counter_mutex);  
     t->fct = f;
     t->step = 0;
 
@@ -71,6 +73,9 @@ task_t* create_task(task_routine_t f)
     t->tstate.output_from_dependencies_list = NULL;
     t->task_dependency_count = 0;
     t->parent_task = NULL;
+    t->task_dependency_done = 0;
+    initialize_mutex(&t->dependency_count_mutex, NULL);
+    initialize_mutex(&t->dependency_done_mutex, NULL);
 #endif
     
     t->status = INIT;
@@ -87,7 +92,9 @@ void submit_task(task_t *t)
 #ifdef WITH_DEPENDENCIES    
     if(active_task != NULL){
         t->parent_task = active_task;
+        pthread_mutex_lock(&active_task->dependency_count_mutex);
         active_task->task_dependency_count++;
+        pthread_mutex_unlock(&active_task->dependency_count_mutex);
         PRINT_DEBUG(100, "Dependency %u -> %u\n", active_task->task_id, t->task_id);
     }
 #endif
@@ -99,7 +106,7 @@ void submit_task(task_t *t)
 void task_waitall(void)
 {
     __atomic_store_n(&barrier, 1, __ATOMIC_RELAXED);
-    while(__atomic_load_n(&nb_executed_tasks, __ATOMIC_RELAXED) < sys_state.task_counter){
+    while(__atomic_load_n(&nb_executed_tasks, __ATOMIC_RELAXED) < __atomic_load_n(&sys_state.task_counter, __ATOMIC_RELAXED)){
         __atomic_store_n(&barrier, 1, __ATOMIC_RELAXED);
         PRINT_DEBUG(100, "SYSCALL!\n");
         syscall(SYS_futex, &barrier, FUTEX_WAIT, 1, NULL, NULL, 0);
