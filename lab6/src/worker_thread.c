@@ -39,21 +39,16 @@ void run(task_t* task){
     else {
        pthread_mutex_lock(&task->dependency_count_mutex);
 
-
-
-    if (task->task_dependency_done == task->task_dependency_count) {
-        task->status = READY;
-        pthread_mutex_unlock(&task->dependency_count_mutex);
-        dispatch_task(task);
+        if (task->task_dependency_done == task->task_dependency_count) {
+            task->status = READY;
+            pthread_mutex_unlock(&task->dependency_count_mutex);
+            dispatch_task(task);
+        } 
+        else {
+            task->status = WAITING;
+            pthread_mutex_unlock(&task->dependency_count_mutex);
+        }
+         
     } 
-    else {
-        task->status = WAITING;
-        pthread_mutex_unlock(&task->dependency_count_mutex);
-    }
-        
-        
-    }
-        
-       
-    }
+}
  
