@@ -102,7 +102,6 @@ void task_waitall(void)
     __atomic_store_n(&barrier, 1, __ATOMIC_RELAXED);
     while(__atomic_load_n(&nb_executed_tasks, __ATOMIC_RELAXED) < sys_state.task_counter){
         __atomic_store_n(&barrier, 1, __ATOMIC_RELAXED);
-        PRINT_DEBUG(100, "SYSCALL!\n");
         syscall(SYS_futex, &barrier, FUTEX_WAIT, 1, NULL, NULL, 0);
     }
     return ;

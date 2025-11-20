@@ -49,9 +49,9 @@ void enqueue_task(tasks_queue_t *q, task_t *t)
 task_t* dequeue_task(tasks_queue_t *q)
 {
     pthread_mutex_lock(&mutex);
-    while(q->index == 0){
-        if(__sync_bool_compare_and_swap(&barrier, 1, 0)){
-            PRINT_DEBUG(100, "SYSCALL!\n");
+    while(q->index <= 0){
+        if(__atomic_load_n(&nb_executed_tasks, __ATOMIC_RELAXED) == sys_state.task_counter 
+        && __sync_bool_compare_and_swap(&barrier, 1, 0)){
             syscall(SYS_futex, &barrier, FUTEX_WAKE, 1, NULL, NULL, 0);
         }
         pthread_cond_wait(&non_empty, &mutex);
