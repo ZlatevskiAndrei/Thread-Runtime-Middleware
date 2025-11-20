@@ -32,10 +32,7 @@ void run(task_t* task){
             task->parent_task->status = READY;
             dispatch_task(task->parent_task);
         }
-        if(last_parent_task_before_waitall == task){
-            syscall(SYS_futex, &barrier, FUTEX_WAKE, 1, NULL, NULL, 0);
-        }
-        pthread_mutex_unlock(&check_runnable_mutex);  
+        pthread_mutex_unlock(&check_runnable_mutex); 
     }
     else {
         task->status = WAITING;

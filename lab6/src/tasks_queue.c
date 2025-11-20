@@ -55,7 +55,8 @@ task_t* dequeue_task(tasks_queue_t *q)
 {
     pthread_mutex_lock(&mutex);
     while(q->index <= 0){
-        if(__sync_bool_compare_and_swap(&barrier, 1, 0) && __atomic_load_n(&last_parent_processed, __ATOMIC_RELAXED)){
+        if(__atomic_load_n(&nb_executed_tasks, __ATOMIC_RELAXED) == __atomic_load_n(&sys_state.task_counter, __ATOMIC_RELAXED) 
+        && __sync_bool_compare_and_swap(&barrier, 1, 0)){
             PRINT_DEBUG(100, "SYSCALL!\n");
             syscall(SYS_futex, &barrier, FUTEX_WAKE, 1, NULL, NULL, 0);
         }

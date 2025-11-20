@@ -108,9 +108,6 @@ void submit_task(task_t *t)
         pthread_mutex_unlock(&t->parent_task->dependency_count_mutex);
         PRINT_DEBUG(100, "Dependency %u -> %u\n", t->parent_task->task_id, t->task_id);
     }
-    else {
-        last_parent_task_before_waitall = t;
-    }
 #endif
     
     dispatch_task(t);
@@ -120,9 +117,16 @@ void submit_task(task_t *t)
 void task_waitall(void) 
 {
     __atomic_store_n(&barrier, 1, __ATOMIC_RELAXED);
-    syscall(SYS_futex, &barrier, FUTEX_WAIT, 1, NULL, NULL, 0);
-    if(!__atomic_load_n(&last_parent_processed, __ATOMIC_RELAXED)){
-        __atomic_store_n(&last_parent_processed, 1, __ATOMIC_RELAXED);
+    while(__atomic_load_n(&nb_executed_tasks, __ATOMIC_RELAXED) < __atomic_load_n(&sys_state.task_counter, __ATOMIC_RELAXED)){
+        __atomic_store_n(&barrier, 1, __ATOMIC_RELAXED);
+        PRINT_DEBUG(100, "SYSCALL!\n");
+        syscall(SYS_futex, &barrier, FUTEX_WAIT, 1, NULL, NULL, 0);
     }
+    tqueue->task_buf_size = QUEUE_CAPACITY;
+    task_t **temp = realloc(tqueue->task_buffer, sizeof(task_t) * tqueue->task_buf_size);
+    if (temp == NULL) {
+        exit(EXIT_FAILURE);  
+    }
+    tqueue->task_buffer = temp; 
     return ;
 }
