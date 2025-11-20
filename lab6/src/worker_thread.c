@@ -20,6 +20,8 @@ void* worker_routine(void* arg){
 task_t* fetch(void){
     return get_task_to_execute();
 }
+
+
 void run(task_t* task){
     task_return_value_t ret = exec_task(task);
     if (ret == TASK_COMPLETED){
@@ -35,6 +37,23 @@ void run(task_t* task){
         pthread_mutex_unlock(&check_runnable_mutex); 
     }
     else {
+       pthread_mutex_lock(&task->dependency_count_mutex);
+
+
+
+    if (task->task_dependency_done == task->task_dependency_count) {
+        task->status = READY;
+        pthread_mutex_unlock(&task->dependency_count_mutex);
+        dispatch_task(task);
+    } 
+    else {
         task->status = WAITING;
+        pthread_mutex_unlock(&task->dependency_count_mutex);
     }
-}
+        
+        
+    }
+        
+       
+    }
+ 
