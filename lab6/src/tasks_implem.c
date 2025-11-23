@@ -103,11 +103,22 @@ void terminate_task(task_t *t)
     PRINT_DEBUG(10, "Task terminated: %u\n", t->task_id);
 
 #ifdef WITH_DEPENDENCIES
-    if(t->parent_task != NULL){
-        task_t *waiting_task = t->parent_task;
-        pthread_mutex_lock(&waiting_task->dependency_done_mutex);
-        waiting_task->task_dependency_done++;
-        pthread_mutex_unlock(&waiting_task->dependency_done_mutex);
+    if(t->parent_task != NULL) {
+        task_t* parent = t->parent_task;
+        
+        pthread_mutex_lock(&parent->mutex_dependency);
+        parent->task_dependency_done++;
+        
+        if (parent->status == WAITING && 
+            parent->task_dependency_done == parent->task_dependency_count) {
+            parent->status = READY;
+            pthread_mutex_unlock(&parent->mutex_dependency);
+            
+            
+            dispatch_task(parent);
+        } else {
+            pthread_mutex_unlock(&parent->mutex_dependency);
+        }
     }
 #endif
 }
