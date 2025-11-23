@@ -87,6 +87,7 @@ task_t* create_task(task_routine_t f)
     t->task_dependency_done = 0;
     initialize_mutex(&t->dependency_count_mutex, NULL);
     initialize_mutex(&t->dependency_done_mutex, NULL);
+    initialize_mutex(&t->mutex_dependency, NULL);
 #endif
     
     t->status = INIT;
@@ -122,6 +123,7 @@ void task_waitall(void)
         PRINT_DEBUG(100, "SYSCALL!\n");
         syscall(SYS_futex, &barrier, FUTEX_WAIT, 1, NULL, NULL, 0);
     }
+    // resizing the queue to its original capacity. 
     tqueue->task_buf_size = QUEUE_CAPACITY;
     task_t **temp = realloc(tqueue->task_buffer, sizeof(task_t) * tqueue->task_buf_size);
     if (temp == NULL) {

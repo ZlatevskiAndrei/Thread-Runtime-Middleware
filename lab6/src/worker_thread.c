@@ -29,10 +29,7 @@ void run(task_t* task){
         terminate_task(task);
     }
     else if (ret == TASK_TO_BE_RESUMED) {
-        //task->step++;
-        
         pthread_mutex_lock(&task->mutex_dependency);
-        
         if (task->task_dependency_done == task->task_dependency_count) {
             task->status = READY;
             pthread_mutex_unlock(&task->mutex_dependency);
@@ -42,9 +39,7 @@ void run(task_t* task){
             task->status = WAITING;
             pthread_mutex_unlock(&task->mutex_dependency);
         }
-    }
-        
-       
-    }
+    }       
+}
  
  
