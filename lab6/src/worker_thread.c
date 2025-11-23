@@ -25,30 +25,26 @@ task_t* fetch(void){
 void run(task_t* task){
     task_return_value_t ret = exec_task(task);
     if (ret == TASK_COMPLETED){
-        __sync_fetch_and_add (&nb_executed_tasks, 1); 
+        __sync_fetch_and_add(&nb_executed_tasks, 1); 
         terminate_task(task);
-        pthread_mutex_lock(&check_runnable_mutex);
-        if(task->parent_task != NULL 
-            && task->parent_task->status == WAITING 
-            && task->parent_task->task_dependency_done == task->parent_task->task_dependency_count){
-            task->parent_task->status = READY;
-            dispatch_task(task->parent_task);
-        }
-        pthread_mutex_unlock(&check_runnable_mutex); 
     }
-    else {
-       pthread_mutex_lock(&task->dependency_count_mutex);
-
+    else if (ret == TASK_TO_BE_RESUMED) {
+        //task->step++;
+        
+        pthread_mutex_lock(&task->mutex_dependency);
+        
         if (task->task_dependency_done == task->task_dependency_count) {
             task->status = READY;
-            pthread_mutex_unlock(&task->dependency_count_mutex);
+            pthread_mutex_unlock(&task->mutex_dependency);
             dispatch_task(task);
         } 
         else {
             task->status = WAITING;
-            pthread_mutex_unlock(&task->dependency_count_mutex);
+            pthread_mutex_unlock(&task->mutex_dependency);
         }
-         
-    } 
-}
+    }
+        
+       
+    }
+ 
  
